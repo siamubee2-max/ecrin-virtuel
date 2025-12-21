@@ -1,41 +1,63 @@
-import { base44 } from './base44Client';
+import { supabase } from './supabaseClient'
 
+// Helper function to create entity operations
+const createEntity = (tableName) => ({
+  async list() {
+    const { data, error } = await supabase.from(tableName).select('*')
+    if (error) throw error
+    return data || []
+  },
 
-export const BodyPart = base44.entities.BodyPart;
+  async get(id) {
+    const { data, error } = await supabase.from(tableName).select('*').eq('id', id).single()
+    if (error) throw error
+    return data
+  },
 
-export const Creation = base44.entities.Creation;
+  async create(record) {
+    const { data, error } = await supabase.from(tableName).insert(record).select().single()
+    if (error) throw error
+    return data
+  },
 
-export const JewelryItem = base44.entities.JewelryItem;
+  async update(id, updates) {
+    const { data, error } = await supabase.from(tableName).update(updates).eq('id', id).select().single()
+    if (error) throw error
+    return data
+  },
 
-export const ClothingItem = base44.entities.ClothingItem;
+  async delete(id) {
+    const { error } = await supabase.from(tableName).delete().eq('id', id)
+    if (error) throw error
+    return true
+  },
 
-export const Review = base44.entities.Review;
+  async filter(filters) {
+    let query = supabase.from(tableName).select('*')
+    Object.entries(filters).forEach(([key, value]) => {
+      query = query.eq(key, value)
+    })
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  }
+})
 
-export const WishlistItem = base44.entities.WishlistItem;
-
-export const Notification = base44.entities.Notification;
-
-export const Order = base44.entities.Order;
-
-export const Stylist = base44.entities.Stylist;
-
-export const StylistService = base44.entities.StylistService;
-
-export const StylistBooking = base44.entities.StylistBooking;
-
-export const Lookbook = base44.entities.Lookbook;
-
-export const LookbookAccess = base44.entities.LookbookAccess;
-
-export const BrandPartnership = base44.entities.BrandPartnership;
-
-export const CreatorProfile = base44.entities.CreatorProfile;
-
-export const CuratedCollection = base44.entities.CuratedCollection;
-
-export const AffiliateClick = base44.entities.AffiliateClick;
-
-
-
-// auth sdk:
-export const User = base44.auth;
+// Export all entities
+export const User = createEntity('users')
+export const JewelryItem = createEntity('jewelry_items')
+export const ClothingItem = createEntity('clothing_items')
+export const Outfit = createEntity('outfits')
+export const Collection = createEntity('collections')
+export const TryOnSession = createEntity('try_on_sessions')
+export const Order = createEntity('orders')
+export const SharedLook = createEntity('shared_looks')
+export const Brand = createEntity('brands')
+export const Stylist = createEntity('stylists')
+export const StyleProfile = createEntity('style_profiles')
+export const WardrobeItem = createEntity('wardrobe_items')
+export const LookbookEntry = createEntity('lookbook_entries')
+export const ProductReview = createEntity('product_reviews')
+export const Notification = createEntity('notifications')
+export const BrandPartnership = createEntity('brand_partnerships')
+export const Creator = createEntity('creators')
