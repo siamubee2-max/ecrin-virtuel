@@ -1,8 +1,6 @@
-
 import React from 'react';
-import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Gem, User, Sparkles, Menu, X, Globe, Box, Shirt, UserCircle, Compass, Package, ShieldCheck, ShoppingBag, Search, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,11 +31,6 @@ function LayoutContent({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { t, language, setLanguage } = useLanguage();
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['currentUserLayout'],
-    queryFn: () => base44.auth.me().catch(() => null),
-  });
-
   const navItems = [
     { label: t.nav.feed, icon: Compass, path: "/StyleFeed" },
     { label: t.nav.gallery, icon: Gem, path: "/" },
@@ -48,12 +41,9 @@ function LayoutContent({ children }) {
     { label: "Brands", icon: Star, path: "/BrandPartnerships" },
     { label: t.nav.profile, icon: UserCircle, path: "/Profile" },
     { label: "Orders", icon: Package, path: "/Orders" },
+    { label: "Admin", icon: ShieldCheck, path: "/AdminOrders" },
+    { label: "Partnerships", icon: Star, path: "/AdminPartnerships" },
   ];
-
-  if (currentUser?.role === 'admin') {
-    navItems.push({ label: "Admin", icon: ShieldCheck, path: "/AdminOrders" });
-    navItems.push({ label: "Partnerships", icon: Star, path: "/AdminPartnerships" });
-  }
 
   const languages = [
     { code: 'fr', label: 'Français', flag: '🇫🇷' },
@@ -214,25 +204,24 @@ function LayoutContent({ children }) {
 
       {/* Main Content */}
       <main className="px-4 md:px-8 max-w-6xl mx-auto min-h-[calc(100vh-4rem)]" style={{ paddingTop: 'calc(96px + var(--safe-area-top))', paddingBottom: 'calc(48px + var(--safe-area-bottom))' }}>
-        {children}
+        <Outlet />
       </main>
 
       {/* Simple Footer */}
       <footer className="border-t border-neutral-200 py-8 text-center text-neutral-400 text-xs tracking-widest uppercase safe-area-bottom" style={{ paddingBottom: 'calc(32px + var(--safe-area-bottom))' }}>
         {t.common.footer}
       </footer>
+      
+      <CartSheet />
     </div>
   );
 }
 
-export default function Layout({ children }) {
+export default function Layout() {
   return (
     <LanguageProvider>
       <CartProvider>
-        <LayoutContent>
-           {children}
-           <CartSheet />
-        </LayoutContent>
+        <LayoutContent />
       </CartProvider>
     </LanguageProvider>
   );
