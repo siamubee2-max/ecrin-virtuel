@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -25,32 +25,49 @@ export default function StylistProfile() {
 
   const { data: currentUser } = useQuery({
     queryKey: ['me'],
-    queryFn: () => base44.auth.me().catch(() => null),
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch (e) { return null }
+    }
   });
 
   const { data: stylist, isLoading } = useQuery({
     queryKey: ['stylist', stylistId],
     queryFn: async () => {
-      const res = await base44.entities.Stylist.list();
-      return res.find(s => s.id === stylistId);
+      const { data } = await supabase.from('stylists').select('*').eq('id', stylistId)
+      return data?.[0]
     },
     enabled: !!stylistId,
   });
 
   const { data: services } = useQuery({
     queryKey: ['stylistServices', stylistId],
-    queryFn: () => base44.entities.StylistService.filter({ stylist_id: stylistId }),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('stylist_services').select('*').eq('stylist_id', stylistId)
+      if (error) throw error
+      return data || []
+    },
     enabled: !!stylistId,
   });
 
   const { data: lookbooks } = useQuery({
     queryKey: ['stylistLookbooks', stylistId],
-    queryFn: () => base44.entities.Lookbook.filter({ stylist_id: stylistId }),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('lookbook_entries').select('*').eq('stylist_id', stylistId)
+      if (error) throw error
+      return data || []
+    },
     enabled: !!stylistId,
   });
 
   const bookingMutation = useMutation({
-    mutationFn: (data) => base44.entities.StylistBooking.create(data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from('stylist_bookings').insert(data)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => {
       toast.success("Booking request sent successfully!");
       setIsBookingOpen(false);

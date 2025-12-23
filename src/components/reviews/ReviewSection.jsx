@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -23,25 +23,40 @@ export default function ReviewSection({ jewelryId }) {
   // Assuming .filter({ jewelry_item_id: jewelryId }) works.
   const { data: reviews, isLoading } = useQuery({
     queryKey: ['reviews', jewelryId],
-    queryFn: () => base44.entities.Review.filter({ jewelry_item_id: jewelryId }, '-created_date'),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('product_reviews').select('*').eq('jewelry_item_id', jewelryId).order('created_date', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
   });
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me().catch(() => null),
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch (e) {
+        return null
+      }
+    },
   });
 
   // Need to fetch the jewelry item to get the owner ID for notification
   const { data: jewelryItem } = useQuery({
     queryKey: ['jewelryItem', jewelryId],
-    queryFn: () => base44.entities.JewelryItem.list().then(items => items.find(i => i.id === jewelryId)),
+    queryFn: async () => {
+      const { data } = await supabase.from('jewelry_items').select('*').eq('id', jewelryId)
+      return data?.[0]
+    },
     enabled: !!jewelryId
   });
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
       // Create review
-      await base44.entities.Review.create(data);
+      const { error } = await supabase.from('product_reviews').insert(data)
+      if (error) throw error
       
       // Create notification for owner (if owner is not self)
       if (jewelryItem?.created_by && jewelryItem.created_by !== user?.email) {
@@ -52,17 +67,17 @@ export default function ReviewSection({ jewelryId }) {
           // LIMITATION: 'created_by' gives email. 'Notification' wants 'recipient_id'. 
           // We need to find the user with that email.
           
-          const users = await base44.entities.User.list();
+          const { data: users } = await supabase.from('users').select('*');
           const owner = users.find(u => u.email === jewelryItem.created_by);
           
           if (owner) {
-             await base44.entities.Notification.create({
-                recipient_id: owner.id,
-                title: "New Review",
-                message: `${user?.full_name || "Someone"} reviewed your item "${jewelryItem.name}"`,
-                type: "review",
-                related_item_id: jewelryItem.id,
-                link: `/JewelryBox?item=${jewelryItem.id}` // Hypothetical link deep linking
+             await supabase.from('notifications').insert({
+               recipient_id: owner.id,
+               title: "New Review",
+               message: `${user?.full_name || "Someone"} reviewed your item "${jewelryItem.name}"`,
+               type: "review",
+               related_item_id: jewelryItem.id,
+               link: `/JewelryBox?item=${jewelryItem.id}` // Hypothetical link deep linking
              });
           }
       }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -30,7 +30,11 @@ export default function Gallery() {
   // Fetch body parts to resolve names
   const { data: bodyParts } = useQuery({
     queryKey: ['bodyParts'],
-    queryFn: () => base44.entities.BodyPart.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('body_parts').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   // Fetch creations with pagination and sorting
@@ -40,13 +44,15 @@ export default function Gallery() {
   const { data: creations, isLoading } = useQuery({
     queryKey: ['creations', sortOrder, typeFilter],
     queryFn: async () => {
-      let query = {};
-      if (typeFilter !== "all") {
-        query.jewelry_type = typeFilter;
-      }
-      // Fetching all matching to handle client side pagination properly 
-      // (or we could rely on a backend count if available, but here we keep it simple)
-      return base44.entities.Creation.filter(query, sortOrder);
+      let q = supabase.from('creations').select('*')
+      if (typeFilter !== 'all') q = q.eq('jewelry_type', typeFilter)
+      // sortOrder like '-created_date' or 'created_date'
+      const desc = sortOrder.startsWith('-')
+      const field = desc ? sortOrder.slice(1) : sortOrder
+      q = q.order(field, { ascending: !desc })
+      const { data, error } = await q
+      if (error) throw error
+      return data || []
     },
   });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +26,8 @@ export default function ShopTheLook() {
   const { data: collection, isLoading } = useQuery({
     queryKey: ['collection', collectionId],
     queryFn: async () => {
-      const collections = await base44.entities.CuratedCollection.filter({ id: collectionId });
-      return collections[0];
+      const { data } = await supabase.from('curated_collections').select('*').eq('id', collectionId)
+      return data?.[0]
     },
     enabled: !!collectionId
   });
@@ -35,9 +35,7 @@ export default function ShopTheLook() {
   // Increment view count
   useEffect(() => {
     if (collection) {
-      base44.entities.CuratedCollection.update(collectionId, {
-        views: (collection.views || 0) + 1
-      }).catch(() => {});
+      supabase.from('curated_collections').update({ views: (collection.views || 0) + 1 }).eq('id', collectionId).catch(() => {});
     }
   }, [collection?.id]);
 
@@ -45,8 +43,8 @@ export default function ShopTheLook() {
   const { data: creator } = useQuery({
     queryKey: ['creator', collection?.creator_id],
     queryFn: async () => {
-      const creators = await base44.entities.CreatorProfile.filter({ id: collection.creator_id });
-      return creators[0];
+      const { data } = await supabase.from('creator_profiles').select('*').eq('id', collection.creator_id)
+      return data?.[0]
     },
     enabled: !!collection?.creator_id
   });
@@ -54,22 +52,34 @@ export default function ShopTheLook() {
   // Fetch items
   const { data: jewelryItems } = useQuery({
     queryKey: ['jewelryItems'],
-    queryFn: () => base44.entities.JewelryItem.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const { data: clothingItems } = useQuery({
     queryKey: ['clothingItems'],
-    queryFn: () => base44.entities.ClothingItem.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clothing_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   // Track affiliate click
   const trackClick = useMutation({
-    mutationFn: (itemData) => base44.entities.AffiliateClick.create({
-      creator_id: creatorRef || collection?.creator_id,
-      item_id: itemData.id,
-      item_type: itemData.itemType,
-      collection_id: collectionId
-    })
+    mutationFn: async (itemData) => {
+      const { error } = await supabase.from('affiliate_clicks').insert({
+        creator_id: creatorRef || collection?.creator_id,
+        item_id: itemData.id,
+        item_type: itemData.itemType,
+        collection_id: collectionId
+      })
+      if (error) throw error
+      return true
+    }
   });
 
   // Get full item details
@@ -121,9 +131,7 @@ export default function ShopTheLook() {
 
   const handleSaveCollection = async () => {
     if (collection) {
-      await base44.entities.CuratedCollection.update(collectionId, {
-        saves: (collection.saves || 0) + 1
-      });
+      await supabase.from('curated_collections').update({ saves: (collection.saves || 0) + 1 }).eq('id', collectionId);
       queryClient.invalidateQueries({ queryKey: ['collection', collectionId] });
     }
   };

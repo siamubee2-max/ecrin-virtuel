@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
+import integrations from '@/api/integrations';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,24 +20,41 @@ export default function StyleFeed() {
   // 1. Fetch User Data & Preferences
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me(),
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch (e) { return null }
+    }
   });
 
   // 2. Fetch Items for recommendations
   const { data: jewelryItems, isLoading: jewelryLoading } = useQuery({
     queryKey: ['jewelryItems'],
-    queryFn: () => base44.entities.JewelryItem.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*')
+      if (error) throw error
+      return data || []
+    },
   });
 
   const { data: clothingItems, isLoading: clothingLoading } = useQuery({
     queryKey: ['clothingItems'],
-    queryFn: () => base44.entities.ClothingItem.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clothing_items').select('*')
+      if (error) throw error
+      return data || []
+    },
   });
 
   // Fetch Wishlist for toggle status
   const { data: myWishlist } = useQuery({
     queryKey: ['myWishlist'],
-    queryFn: () => base44.entities.WishlistItem.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('wishlist_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const toggleWishlist = async (e, itemId) => {
@@ -45,9 +63,15 @@ export default function StyleFeed() {
     const existing = myWishlist?.find(w => w.jewelry_item_id === itemId);
     
     if (existing) {
-      await base44.entities.WishlistItem.delete(existing.id);
+      const { error } = await supabase.from('wishlist_items').delete().eq('id', existing.id);
+      if (error) console.error(error);
     } else {
-      await base44.entities.WishlistItem.create({ jewelry_item_id: itemId });
+      const auth = await supabase.auth.getUser();
+      const uid = auth?.data?.user?.id;
+      const payload = { jewelry_item_id: itemId };
+      if (uid) payload.created_by = uid;
+      const { error } = await supabase.from('wishlist_items').insert(payload);
+      if (error) console.error(error);
     }
     queryClient.invalidateQueries({ queryKey: ['myWishlist'] });
   };
@@ -93,7 +117,7 @@ export default function StyleFeed() {
       `;
 
       try {
-        const response = await base44.integrations.Core.InvokeLLM({
+        const response = await integrations.InvokeLLM({
           prompt: prompt,
           response_json_schema: {
             type: "object",

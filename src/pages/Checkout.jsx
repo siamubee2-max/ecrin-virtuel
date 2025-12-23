@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,14 +81,15 @@ export default function Checkout() {
       // First, process payment
       const paymentResult = await simulatePaymentGateway();
       
-      const user = await base44.auth.me().catch(() => ({ email: formData.email, full_name: formData.name }));
+      const userRes = await supabase.auth.getUser().catch(() => null);
+      const user = userRes?.data?.user || { email: formData.email, full_name: formData.name };
       const fullAddress = `${formData.address}, ${formData.city}, ${formData.zip}, ${formData.country}`;
       const groupID = Math.random().toString(36).substr(2, 9);
 
       // Create order records
       const promises = items.map(item => {
         const price = (item.sale_price && item.sale_price < item.price) ? item.sale_price : item.price;
-        return base44.entities.Order.create({
+        return supabase.from('orders').insert({
           item_id: item.id,
           quantity: item.quantity,
           total_price: price * item.quantity,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -12,20 +12,32 @@ export default function SearchResults() {
   const query = urlParams.get('q') || "";
   const [activeTab, setActiveTab] = useState("all");
 
-  const { data: jewelry, isLoading: jLoading } = useQuery({
-    queryKey: ['searchJewelry'],
-    queryFn: () => base44.entities.JewelryItem.list(),
-  });
+   const { data: jewelry, isLoading: jLoading } = useQuery({
+      queryKey: ['searchJewelry'],
+      queryFn: async () => {
+         const { data, error } = await supabase.from('jewelry_items').select('*');
+         if (error) throw error;
+         return data || [];
+      },
+   });
 
-  const { data: clothes, isLoading: cLoading } = useQuery({
-    queryKey: ['searchClothes'],
-    queryFn: () => base44.entities.ClothingItem.list(),
-  });
+   const { data: clothes, isLoading: cLoading } = useQuery({
+      queryKey: ['searchClothes'],
+      queryFn: async () => {
+         const { data, error } = await supabase.from('clothing_items').select('*');
+         if (error) throw error;
+         return data || [];
+      },
+   });
 
-  const { data: stylists, isLoading: sLoading } = useQuery({
-    queryKey: ['searchStylists'],
-    queryFn: () => base44.entities.Stylist.list(),
-  });
+   const { data: stylists, isLoading: sLoading } = useQuery({
+      queryKey: ['searchStylists'],
+      queryFn: async () => {
+         const { data, error } = await supabase.from('stylists').select('*');
+         if (error) throw error;
+         return data || [];
+      },
+   });
 
   const filteredJewelry = jewelry?.filter(item => 
     item.name.toLowerCase().includes(query.toLowerCase()) || 

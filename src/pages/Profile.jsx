@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,8 +40,22 @@ export default function Profile() {
   const { data: user, isLoading: userLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      const userData = await base44.auth.me();
-      // If user has no style_preferences init, ensure structure
+      const authRes = await supabase.auth.getUser();
+      const authUser = authRes?.data?.user;
+      if (!authUser) return null;
+
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        // If no profile row exists, return basic auth user info
+        return { email: authUser.email };
+      }
+
+      const userData = { ...(profile || {}), email: authUser.email };
       if (!userData.style_preferences) {
         userData.style_preferences = {
           favorite_colors: [],
@@ -56,29 +70,46 @@ export default function Profile() {
   // Fetch User Creations
   const { data: creations, isLoading: creationsLoading } = useQuery({
     queryKey: ['myCreations'],
-    queryFn: () => base44.entities.Creation.list('-created_date', 20), // Last 20 creations
+    queryFn: async () => {
+      const authRes = await supabase.auth.getUser();
+      const uid = authRes?.data?.user?.id;
+      if (!uid) return [];
+      const { data, error } = await supabase
+        .from('creations')
+        .select('*')
+        .eq('created_by', uid)
+        .order('created_date', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data;
+    },
   });
 
   // Fetch Wishlist
   const { data: wishlistItems } = useQuery({
     queryKey: ['myWishlist'],
     queryFn: async () => {
-       const userEmail = user?.email; // Assuming we can filter by creator implicitly or explicit
-       // Note: Standard list() returns items created by user if RLS is on, or all. 
-       // We'll filter client side if needed or assume backend handles 'my data'.
-       // Best practice with base44: .list() usually returns what user has access to.
-       // If we want to be safe we can use .filter({ created_by: user.email }) if we had the email.
-       // But usually for simple apps, list() is fine.
-       const items = await base44.entities.WishlistItem.list();
-       return items; 
+      const authRes = await supabase.auth.getUser();
+      const uid = authRes?.data?.user?.id;
+      if (!uid) return [];
+      const { data, error } = await supabase
+        .from('wishlist_items')
+        .select('*')
+        .eq('created_by', uid);
+      if (error) throw error;
+      return data;
     }
   });
 
   // Fetch all jewelry to map wishlist items (optimized: fetch all and filter client side for small catalogs)
-  const { data: allJewelry } = useQuery({
-     queryKey: ['allJewelry'],
-     queryFn: () => base44.entities.JewelryItem.list()
-  });
+    const { data: allJewelry } = useQuery({
+      queryKey: ['allJewelry'],
+      queryFn: async () => {
+       const { data, error } = await supabase.from('jewelry_items').select('*');
+       if (error) throw error;
+       return data;
+      }
+    });
 
   const myWishlistJewelry = allJewelry?.filter(j => 
      wishlistItems?.some(w => w.jewelry_item_id === j.id)
@@ -108,11 +139,22 @@ export default function Profile() {
 
   // Update Mutation
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.auth.updateMe(data),
+    mutationFn: async (data) => {
+      const authRes = await supabase.auth.getUser();
+      const uid = authRes?.data?.user?.id;
+      if (!uid) throw new Error('Not authenticated');
+      const payload = {
+        full_name: data.full_name,
+        bio: data.bio,
+        style_preferences: data.style_preferences
+      };
+      const { data: updated, error } = await supabase.from('users').update(payload).eq('id', uid).select().single();
+      if (error) throw error;
+      return updated;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       setIsSaving(false);
-      // Optional: Show success toast/message
     },
     onError: () => setIsSaving(false)
   });
@@ -262,11 +304,12 @@ export default function Profile() {
                               variant="destructive" 
                               className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={async () => {
-                                 const wishlistItem = wishlistItems.find(w => w.jewelry_item_id === item.id);
-                                 if (wishlistItem) {
-                                    await base44.entities.WishlistItem.delete(wishlistItem.id);
-                                    queryClient.invalidateQueries({ queryKey: ['myWishlist'] });
-                                 }
+                                const wishlistItem = wishlistItems.find(w => w.jewelry_item_id === item.id);
+                                if (wishlistItem) {
+                                  const { error } = await supabase.from('wishlist_items').delete().eq('id', wishlistItem.id);
+                                  if (error) console.error(error);
+                                  queryClient.invalidateQueries({ queryKey: ['myWishlist'] });
+                                }
                               }}
                             >
                               <Heart className="w-4 h-4 fill-white" />

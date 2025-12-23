@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -15,7 +15,11 @@ export default function Stylists() {
 
   const { data: stylists, isLoading } = useQuery({
     queryKey: ['stylists'],
-    queryFn: () => base44.entities.Stylist.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('stylists').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const uniqueSpecialties = React.useMemo(() => {

@@ -1,26 +1,85 @@
-import { base44 } from './base44Client';
+import { supabase } from './supabaseClient';
 
+// ============================================
+// Intégrations - L'Écrin Virtuel (Supabase)
+// ============================================
 
+// Upload de fichiers vers Supabase Storage
+export const UploadFile = async ({ file }) => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+  const filePath = `uploads/${fileName}`;
 
+  const { data, error } = await supabase.storage
+    .from('images')
+    .upload(filePath, file);
 
-export const Core = base44.integrations.Core;
+  if (error) {
+    console.error('Upload error:', error);
+    throw error;
+  }
 
-export const InvokeLLM = base44.integrations.Core.InvokeLLM;
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('images')
+    .getPublicUrl(filePath);
 
-export const SendEmail = base44.integrations.Core.SendEmail;
+  return { file_url: urlData.publicUrl };
+};
 
-export const UploadFile = base44.integrations.Core.UploadFile;
+// Placeholder pour InvokeLLM - à connecter à OpenAI plus tard
+export const InvokeLLM = async ({ prompt, file_urls, response_json_schema }) => {
+  console.log('InvokeLLM called with:', { prompt, file_urls });
+  // Pour l'instant, retourne des suggestions génériques
+  return {
+    suggestions: "Ce bijou s'harmonise parfaitement avec votre teint.",
+    advice: "L'or rose complète les tons chauds de votre peau.",
+    compatible_items: ["Boucles d'oreilles assorties", "Bracelet fin", "Bague délicate"]
+  };
+};
 
-export const GenerateImage = base44.integrations.Core.GenerateImage;
+// Placeholder pour GenerateImage - à connecter à une API d'IA plus tard
+export const GenerateImage = async ({ prompt, existing_image_urls }) => {
+  console.log('GenerateImage called with:', { prompt, existing_image_urls });
+  // Pour l'instant, retourne la première image existante
+  // Tu pourras connecter Replicate, Stability AI, ou autre plus tard
+  return { 
+    url: existing_image_urls?.[0] || null 
+  };
+};
 
-export const ExtractDataFromUploadedFile = base44.integrations.Core.ExtractDataFromUploadedFile;
+// Placeholder pour extraction de données
+export const ExtractDataFromUploadedFile = async ({ file_url }) => {
+  console.log('ExtractDataFromUploadedFile called');
+  return {};
+};
 
-export const CreateFileSignedUrl = base44.integrations.Core.CreateFileSignedUrl;
+// Placeholder pour fetch website
+export const FetchWebsite = async ({ url }) => {
+  console.log('FetchWebsite called:', url);
+  return { content: '' };
+};
 
-export const UploadPrivateFile = base44.integrations.Core.UploadPrivateFile;
+// Placeholder pour email
+export const SendEmail = async ({ to, subject, body }) => {
+  console.log('SendEmail called:', { to, subject });
+  return { success: true };
+};
 
+// Placeholder pour SMS
+export const SendSMS = async ({ to, message }) => {
+  console.log('SendSMS called:', { to });
+  return { success: true };
+};
 
-
-
-
+// Export par défaut
+export default {
+  UploadFile,
+  InvokeLLM,
+  GenerateImage,
+  ExtractDataFromUploadedFile,
+  FetchWebsite,
+  SendEmail,
+  SendSMS
+};
 
