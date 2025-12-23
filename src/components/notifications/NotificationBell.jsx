@@ -68,7 +68,7 @@ export default function NotificationBell() {
         <ScrollArea className="h-[350px]">
           {isLoading ? (
             <div className="p-8 text-center text-neutral-400 text-sm">Loading...</div>
-          ) : notifications?.length === 0 ? (
+          ) : !notifications || notifications.length === 0 ? (
             <div className="p-8 text-center text-neutral-400 text-sm flex flex-col items-center gap-2">
               <Bell className="w-8 h-8 opacity-20" />
               <p>{language === 'fr' ? "Aucune notification" : "No notifications"}</p>

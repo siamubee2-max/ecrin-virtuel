@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Star, Clock, Calendar as CalendarIcon, CheckCircle2, Lock, ShoppingBag } from "lucide-react";
+import { Loader2, Star, Clock, Calendar as CalendarIcon, CheckCircle2, Lock, ShoppingBag, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from 'sonner';
 
