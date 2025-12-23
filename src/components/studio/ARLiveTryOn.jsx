@@ -1,5 +1,6 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/api/supabaseClient';
+import integrations from '@/api/integrations';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Camera, RefreshCw, X, Maximize2, RotateCw, Move, Loader2, Check, Sparkles, Eye, EyeOff, Gem, Shirt, Scan, Zap, Sun, Contrast } from "lucide-react";
@@ -259,10 +260,10 @@ export default function ARLiveTryOn({ jewelryImage, jewelryType = "necklace", cl
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
       const file = new File([blob], `ar-tryon-${Date.now()}.jpg`, { type: 'image/jpeg' });
       
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const { file_url } = await integrations.UploadFile({ file });
       
       // Save to Creation entity
-      await base44.entities.Creation.create({
+      await supabase.from('creations').insert({
         jewelry_image_url: mode === "jewelry" ? jewelryImage : null,
         result_image_url: file_url,
         description: `AR Try-On - ${mode === "jewelry" ? jewelryType : "Clothing"}`,

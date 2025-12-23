@@ -1,7 +1,5 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { Gem, Sparkles, Shirt, User } from 'lucide-react';
-import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   return (

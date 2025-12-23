@@ -1,15 +1,15 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Maximize2, RotateCw, Save, X, Undo2, Move } from "lucide-react";
 import { motion } from "framer-motion";
 import html2canvas from 'html2canvas';
-import { base44 } from '@/api/base44Client';
+import integrations from '@/api/integrations';
 import { Loader2 } from "lucide-react";
 import { useLanguage } from '@/components/LanguageProvider';
 
 export default function TryOnEditor({ bodyImage, jewelryImage, onSave, onCancel }) {
-  const { t } = useLanguage();
+  const { t: _t } = useLanguage();
   const [scale, setScale] = useState([1]);
   const [rotation, setRotation] = useState([0]);
   const [saving, setSaving] = useState(false);
@@ -38,7 +38,7 @@ export default function TryOnEditor({ bodyImage, jewelryImage, onSave, onCancel 
         // We need to pass a File object usually, but the integration might accept blob if we name it
         const file = new File([blob], "edited-tryon.png", { type: "image/png" });
         
-        const result = await base44.integrations.Core.UploadFile({ file });
+        const result = await integrations.UploadFile({ file });
         
         if (result && result.file_url) {
           onSave(result.file_url);

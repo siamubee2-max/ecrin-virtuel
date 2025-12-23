@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
+import integrations from '@/api/integrations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Loader2, Camera, Tag, Trash2, Filter, Star, Eye, Heart, DollarSign, Calendar as CalendarIcon, Edit2, Percent, ShoppingBag } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Loader2, Camera, Trash2, Star, Eye, Heart, DollarSign, Calendar as CalendarIcon, Edit2, Percent, ShoppingBag, Sparkles, Clock } from "lucide-react";
+import { motion } from "framer-motion";
 import { useLanguage } from '@/components/LanguageProvider';
-import StarRating from '@/components/reviews/StarRating';
 import ReviewSection from '@/components/reviews/ReviewSection';
 import SalesBadge from '@/components/jewelry/SalesBadge';
 import JewelryFilters from '@/components/jewelry/JewelryFilters';
@@ -62,14 +62,22 @@ export default function JewelryBox() {
 
   const { data: jewelryItems, isLoading } = useQuery({
     queryKey: ['jewelryItems'],
-    queryFn: () => base44.entities.JewelryItem.list('-created_date'),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*').order('created_date', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
   });
 
   // Fetch all reviews to calculate averages
   // In a real large app, we would aggregate this in backend or fetch per item
   const { data: allReviews } = useQuery({
     queryKey: ['reviews'],
-    queryFn: () => base44.entities.Review.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('product_reviews').select('*')
+      if (error) throw error
+      return data || []
+    },
   });
 
   const getRatingStats = (itemId) => {
@@ -87,7 +95,11 @@ export default function JewelryBox() {
   // Wishlist Logic
   const { data: myWishlist } = useQuery({
     queryKey: ['myWishlist'],
-    queryFn: () => base44.entities.WishlistItem.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('wishlist_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const toggleWishlist = async (e, itemId) => {
@@ -96,9 +108,11 @@ export default function JewelryBox() {
     
     // Optimistic update could go here, but for simplicity we'll await
     if (existing) {
-      await base44.entities.WishlistItem.delete(existing.id);
+      const { error } = await supabase.from('wishlist_items').delete().eq('id', existing.id)
+      if (error) throw error
     } else {
-      await base44.entities.WishlistItem.create({ jewelry_item_id: itemId });
+      const { error } = await supabase.from('wishlist_items').insert({ jewelry_item_id: itemId })
+      if (error) throw error
     }
     queryClient.invalidateQueries({ queryKey: ['myWishlist'] });
   };
@@ -112,7 +126,11 @@ export default function JewelryBox() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.JewelryItem.create(data),
+    mutationFn: async (data) => {
+      const { data: created, error } = await supabase.from('jewelry_items').insert(data).select().single()
+      if (error) throw error
+      return created
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jewelryItems'] });
       setIsDialogOpen(false);
@@ -138,7 +156,8 @@ export default function JewelryBox() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       const originalItem = jewelryItems.find(i => i.id === id);
-      await base44.entities.JewelryItem.update(id, data);
+      const { error: updateError } = await supabase.from('jewelry_items').update(data).eq('id', id).select().single();
+      if (updateError) throw updateError;
       
       // Notification Logic: Check if sale started or price dropped
       const oldPrice = originalItem.sale_price || originalItem.price;
@@ -149,16 +168,16 @@ export default function JewelryBox() {
 
       if (isSaleStart || isPriceDrop) {
          // Find wishlists with this item
-         const wishlists = await base44.entities.WishlistItem.filter({ jewelry_item_id: id });
+         const { data: wishlists } = await supabase.from('wishlist_items').select('*').eq('jewelry_item_id', id);
          
          // Notify each user (assuming we can map created_by to user or just send to created_by email if system supports)
          // NOTE: Here we iterate. In production backend, this should be a batch job.
-         const users = await base44.entities.User.list();
+         const { data: users } = await supabase.from('users').select('*');
          
          for (const w of wishlists) {
             const user = users.find(u => u.email === w.created_by);
             if (user) {
-               await base44.entities.Notification.create({
+               await supabase.from('notifications').insert({
                  recipient_id: user.id,
                  title: isSaleStart ? "Sale Alert!" : "Price Drop!",
                  message: `Great news! "${data.name}" is now available for $${newPrice}.`,
@@ -178,7 +197,11 @@ export default function JewelryBox() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.JewelryItem.delete(id),
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('jewelry_items').delete().eq('id', id)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jewelryItems'] });
     }
@@ -197,7 +220,7 @@ export default function JewelryBox() {
         - description: A brief, attractive description.
       `;
 
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await integrations.InvokeLLM({
         prompt: prompt,
         file_urls: [imageUrl],
         response_json_schema: {
@@ -241,7 +264,7 @@ export default function JewelryBox() {
 
     setUploading(true);
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const result = await integrations.UploadFile({ file });
       await analyzeImage(result.file_url);
     } catch (error) {
       console.error("Upload failed", error);

@@ -1,7 +1,4 @@
-import React from 'react';
 import { Percent, Clock } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { fr, enUS } from 'date-fns/locale'; // Import locales if needed, defaulting to generic for now
 
 export default function SalesBadge({ price, salePrice, endDate, className }) {
   if (!salePrice || !price || salePrice >= price) return null;

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
+import integrations from '@/api/integrations';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,12 +30,19 @@ export default function Studio() {
   // Fetch user for stylist context
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me().catch(() => null), // Handle not logged in
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch {
+        return null
+      }
+    }
   });
 
   const [step, setStep] = useState(STEPS.UPLOAD);
   const [uploading, setUploading] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [_generating, setGenerating] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
   
   // Creation State
@@ -51,14 +59,22 @@ export default function Studio() {
 
   const { data: bodyParts } = useQuery({
     queryKey: ['bodyParts'],
-    queryFn: () => base44.entities.BodyPart.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('body_parts').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const [metalFilter, setMetalFilter] = useState("all");
 
   const { data: catalogItems } = useQuery({
     queryKey: ['jewelryItems'],
-    queryFn: () => base44.entities.JewelryItem.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const filteredCatalogItems = catalogItems?.filter(item => {
@@ -73,7 +89,7 @@ export default function Studio() {
 
     setUploading(true);
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const result = await integrations.UploadFile({ file });
       setJewelryImage(result.file_url);
     } catch (error) {
       console.error("Upload failed", error);
@@ -114,7 +130,7 @@ export default function Studio() {
         Be elegant, professional, and helpful. Incorporate their aesthetic preferences if provided.
       `;
 
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await integrations.InvokeLLM({
         prompt: prompt,
         file_urls: [bodyPart.image_url, jewelryImage],
         response_json_schema: {
@@ -166,7 +182,7 @@ export default function Studio() {
         - Additional instructions: ${notes}
       `;
 
-      const response = await base44.integrations.Core.GenerateImage({
+      const response = await integrations.GenerateImage({
         prompt: prompt,
         existing_image_urls: [bodyPart.image_url, jewelryImage],
       });
@@ -175,13 +191,13 @@ export default function Studio() {
         setResultImage(response.url);
         
         // Save the creation
-        const newCreation = await base44.entities.Creation.create({
+        const { data: newCreation } = await supabase.from('creations').insert({
           jewelry_image_url: jewelryImage,
           result_image_url: response.url,
           body_part_id: selectedBodyPartId,
           description: notes,
           jewelry_type: jewelryType
-        });
+        }).select().single();
         
         if (newCreation) {
           setCurrentCreationId(newCreation.id);
@@ -205,9 +221,8 @@ export default function Studio() {
     // Update the existing creation record
     if (currentCreationId) {
       try {
-        await base44.entities.Creation.update(currentCreationId, {
-          result_image_url: newUrl
-        });
+        const { error } = await supabase.from('creations').update({ result_image_url: newUrl }).eq('id', currentCreationId)
+        if (error) throw error
       } catch (err) {
         console.error("Failed to update creation record", err);
       }
@@ -353,27 +368,51 @@ export default function Studio() {
                       </Button>
                     </div>
 
-                    {!showCatalog ? (
-                      <div className="border-2 border-dashed border-neutral-200 rounded-xl flex-1 flex flex-col items-center justify-center p-6 text-center hover:bg-neutral-50 transition-colors relative min-h-[200px]">
-                        <input 
-                          type="file" 
-                          accept="image/*"
-                          onChange={handleJewelryUpload}
-                          className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                        />
-                        {uploading ? (
-                          <Loader2 className="w-10 h-10 animate-spin text-amber-500" />
-                        ) : jewelryImage ? (
-                          <img src={jewelryImage} alt="Jewelry" className="h-full max-h-64 object-contain" />
-                        ) : (
-                          <>
-                            <Upload className="w-10 h-10 text-neutral-300 mb-4" />
-                            <p className="text-neutral-900 font-medium">{t.common.clickToUpload}</p>
-                            <p className="text-neutral-400 text-sm mt-1">JPG, PNG</p>
-                          </>
-                        )}
-                      </div>
-                    ) : (
+                   {!showCatalog ? (
+  <div className="space-y-4">
+    {/* Option URL */}
+    <div className="flex gap-2">
+      <Input 
+        placeholder="Coller une URL d'image..."
+        value={jewelryImage.startsWith('http') ? jewelryImage : ''}
+        onChange={(e) => setJewelryImage(e.target.value)}
+        className="flex-1"
+      />
+      <Button 
+        variant="outline" 
+        onClick={() => {
+          if (jewelryImage) setJewelryImage('')
+        }}
+        disabled={!jewelryImage}
+      >
+        Effacer
+      </Button>
+    </div>
+    
+    <div className="text-center text-neutral-400 text-sm">— ou —</div>
+    
+    {/* Zone d'upload */}
+    <div className="border-2 border-dashed border-luxury-beige/50 rounded-2xl flex flex-col items-center justify-center p-8 text-center hover:bg-gradient-luxury transition-all duration-300 relative min-h-[200px] shadow-luxury">
+      <input 
+        type="file" 
+        accept="image/*"
+        onChange={handleJewelryUpload}
+        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+      />
+      {uploading ? (
+        <Loader2 className="w-12 h-12 animate-spin text-luxury-gold" />
+      ) : jewelryImage ? (
+        <img src={jewelryImage} alt="Jewelry" className="h-full max-h-48 object-contain rounded-xl shadow-luxury-lg" />
+      ) : (
+        <>
+          <Upload className="w-12 h-12 text-luxury-beige mb-4" />
+          <p className="text-luxury-black font-medium">{t.common.clickToUpload}</p>
+          <p className="text-luxury-black/50 text-sm">JPG, PNG</p>
+        </>
+      )}
+    </div>
+  </div>
+) : (
                       <div className="flex-1 overflow-y-auto max-h-[350px] border rounded-xl p-3 bg-neutral-50 flex flex-col gap-3">
                         <div className="flex gap-2">
                             <Select value={metalFilter} onValueChange={setMetalFilter}>

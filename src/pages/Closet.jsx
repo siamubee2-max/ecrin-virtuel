@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
+import integrations from '@/api/integrations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Loader2, Camera, Shirt, Trash2, Sparkles, Link as LinkIcon, X, CheckSquare, Square, Video } from "lucide-react";
+import { Plus, Loader2, Camera, Shirt, Trash2, Sparkles, Link as LinkIcon, X, CheckSquare, Square, Video } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from '@/components/LanguageProvider';
 import ClothingFilters from '@/components/clothing/ClothingFilters';
@@ -60,17 +61,29 @@ export default function Closet() {
   // Data Fetching
   const { data: clothes, isLoading: clothesLoading } = useQuery({
     queryKey: ['clothes'],
-    queryFn: () => base44.entities.ClothingItem.list('-created_date'),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clothing_items').select('*').order('created_date', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
   });
 
-  const { data: jewelry, isLoading: jewelryLoading } = useQuery({
+  const { data: jewelry, isLoading: _jewelryLoading } = useQuery({
     queryKey: ['jewelryItems'],
-    queryFn: () => base44.entities.JewelryItem.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*')
+      if (error) throw error
+      return data || []
+    },
   });
 
   // Mutations
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ClothingItem.create(data),
+    mutationFn: async (data) => {
+      const { data: created, error } = await supabase.from('clothing_items').insert(data).select().single()
+      if (error) throw error
+      return created
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clothes'] });
       setIsDialogOpen(false);
@@ -79,7 +92,11 @@ export default function Closet() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ClothingItem.delete(id),
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('clothing_items').delete().eq('id', id)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clothes'] });
     }
@@ -104,7 +121,7 @@ export default function Closet() {
 
     setUploading(true);
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const result = await integrations.UploadFile({ file });
       setNewItem(prev => ({ ...prev, image_url: result.file_url }));
       
       // Auto-tagging could be added here similar to JewelryBox
@@ -122,7 +139,7 @@ export default function Closet() {
     try {
       let prompt = "";
       let file_urls = [];
-      let jsonSchema = {};
+      let _jsonSchema = {};
 
       if (stylistMode === 'outfit') {
         // Mode: Clothes -> Jewelry
@@ -183,7 +200,7 @@ export default function Closet() {
         `;
       }
 
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await integrations.InvokeLLM({
         prompt: prompt,
         file_urls: file_urls,
         response_json_schema: {

@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock, ShoppingBag, ExternalLink, ArrowLeft } from "lucide-react";
 import { toast } from 'sonner';
@@ -16,14 +14,19 @@ export default function Lookbook() {
 
   const { data: currentUser } = useQuery({
     queryKey: ['me'],
-    queryFn: () => base44.auth.me().catch(() => null),
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch { return null }
+    },
   });
 
   const { data: lookbook, isLoading } = useQuery({
     queryKey: ['lookbook', lookbookId],
     queryFn: async () => {
-      const res = await base44.entities.Lookbook.list();
-      return res.find(l => l.id === lookbookId);
+      const { data } = await supabase.from('lookbook_entries').select('*').eq('id', lookbookId)
+      return data?.[0]
     },
     enabled: !!lookbookId,
   });
@@ -33,11 +36,8 @@ export default function Lookbook() {
     queryKey: ['lookbookAccess', lookbookId, currentUser?.id],
     queryFn: async () => {
       if (!currentUser) return null;
-      const res = await base44.entities.LookbookAccess.filter({ 
-        user_id: currentUser.id, 
-        lookbook_id: lookbookId 
-      });
-      return res.length > 0 ? res[0] : null;
+      const { data } = await supabase.from('lookbook_access').select('*').eq('user_id', currentUser.id).eq('lookbook_id', lookbookId)
+      return data?.[0] || null
     },
     enabled: !!lookbookId && !!currentUser,
   });
@@ -49,8 +49,8 @@ export default function Lookbook() {
       if (!lookbook?.associated_item_ids?.length) return [];
       // This is simplified. In a real app we'd fetch specific IDs efficiently.
       // Here we fetch all (cached) and filter, or use specific endpoint if available.
-      const jewelry = await base44.entities.JewelryItem.list();
-      const clothes = await base44.entities.ClothingItem.list();
+      const { data: jewelry } = await supabase.from('jewelry_items').select('*')
+      const { data: clothes } = await supabase.from('clothing_items').select('*')
       const all = [...jewelry, ...clothes];
       return all.filter(item => lookbook.associated_item_ids.includes(item.id));
     },
@@ -58,7 +58,10 @@ export default function Lookbook() {
   });
 
   const purchaseMutation = useMutation({
-    mutationFn: (data) => base44.entities.LookbookAccess.create(data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from('lookbook_access').insert(data);
+      if (error) throw error;
+    },
     onSuccess: () => {
       toast.success("Purchase successful! Content unlocked.");
       queryClient.invalidateQueries({ queryKey: ['lookbookAccess'] });

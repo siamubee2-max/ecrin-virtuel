@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Crown, Users, Package, TrendingUp, DollarSign, Edit, Trash2, CheckCircle2, XCircle, Eye } from "lucide-react";
+import { Loader2, Plus, Crown, Users, TrendingUp, DollarSign, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
 
 export default function AdminPartnerships() {
   const queryClient = useQueryClient();
@@ -27,35 +27,61 @@ export default function AdminPartnerships() {
   // Auth check
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: async () => {
+      try { const { data } = await supabase.auth.getUser(); return data?.user || null } catch{return null}
+    }
   });
 
   // Fetch data
-  const { data: brands, isLoading: brandsLoading } = useQuery({
+  const { data: brands, isLoading: _brandsLoading } = useQuery({
     queryKey: ['allBrands'],
-    queryFn: () => base44.entities.BrandPartnership.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('brand_partnerships').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
-  const { data: creators, isLoading: creatorsLoading } = useQuery({
+  const { data: creators, isLoading: _creatorsLoading } = useQuery({
     queryKey: ['allCreators'],
-    queryFn: () => base44.entities.CreatorProfile.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('creator_profiles').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const { data: collections } = useQuery({
     queryKey: ['allCollections'],
-    queryFn: () => base44.entities.CuratedCollection.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curated_collections').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const { data: clicks } = useQuery({
     queryKey: ['affiliateClicks'],
-    queryFn: () => base44.entities.AffiliateClick.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('affiliate_clicks').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   // Mutations
   const saveBrand = useMutation({
-    mutationFn: (data) => editingBrand 
-      ? base44.entities.BrandPartnership.update(editingBrand.id, data)
-      : base44.entities.BrandPartnership.create(data),
+    mutationFn: async (data) => {
+      if (editingBrand) {
+        const { error } = await supabase.from('brand_partnerships').update(data).eq('id', editingBrand.id)
+        if (error) throw error
+        return true
+      } else {
+        const { error } = await supabase.from('brand_partnerships').insert(data)
+        if (error) throw error
+        return true
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allBrands'] });
       setBrandDialog(false);
@@ -65,12 +91,20 @@ export default function AdminPartnerships() {
   });
 
   const deleteBrand = useMutation({
-    mutationFn: (id) => base44.entities.BrandPartnership.delete(id),
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('brand_partnerships').delete().eq('id', id)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['allBrands'] })
   });
 
   const updateCreator = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.CreatorProfile.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const { error } = await supabase.from('creator_profiles').update(data).eq('id', id)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['allCreators'] })
   });
 
@@ -82,7 +116,7 @@ export default function AdminPartnerships() {
 
   // Stats
   const totalClicks = clicks?.length || 0;
-  const conversions = clicks?.filter(c => c.converted).length || 0;
+  const _conversions = clicks?.filter(c => c.converted).length || 0;
   const totalCommissions = clicks?.reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
 
   if (user?.role !== 'admin') {
@@ -461,7 +495,15 @@ export default function AdminPartnerships() {
                       <TableCell>
                         <Switch 
                           checked={col.featured} 
-                          onCheckedChange={(v) => base44.entities.CuratedCollection.update(col.id, { featured: v }).then(() => queryClient.invalidateQueries({ queryKey: ['allCollections'] }))}
+                          onCheckedChange={async (v) => {
+                            try {
+                              const { error } = await supabase.from('curated_collections').update({ featured: v }).eq('id', col.id);
+                              if (error) throw error;
+                              queryClient.invalidateQueries({ queryKey: ['allCollections'] });
+                            } catch (err) {
+                              console.error('Failed to update collection featured flag', err);
+                            }
+                          }}
                         />
                       </TableCell>
                     </TableRow>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,11 +19,22 @@ export default function ProductReviewSection({ itemId, reviews = [] }) {
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me().catch(() => null)
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch {
+        return null
+      }
+    }
   });
 
   const submitReview = useMutation({
-    mutationFn: (data) => base44.entities.Review.create(data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from('product_reviews').insert(data)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reviews', itemId] });
       setSubmitSuccess(true);

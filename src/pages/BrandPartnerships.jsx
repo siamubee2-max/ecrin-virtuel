@@ -1,45 +1,65 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Crown, Sparkles, ExternalLink, Search, Heart, ShoppingBag, Eye, Bookmark, ChevronRight, Star, TrendingUp, Users } from "lucide-react";
+import { Loader2, Crown, Sparkles, ExternalLink, Search, Heart, Eye, Bookmark, ChevronRight, Star, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useCart } from '@/components/cart/CartProvider';
 
 export default function BrandPartnerships() {
-  const { addToCart } = useCart();
+  const { addToCart: _addToCart } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("featured");
 
   // Fetch data
   const { data: brands, isLoading: brandsLoading } = useQuery({
     queryKey: ['brandPartnerships'],
-    queryFn: () => base44.entities.BrandPartnership.filter({ status: 'active' })
+    queryFn: async () => {
+      const { data, error } = await supabase.from('brand_partnerships').select('*').eq('status', 'active');
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const { data: collections, isLoading: collectionsLoading } = useQuery({
     queryKey: ['curatedCollections'],
-    queryFn: () => base44.entities.CuratedCollection.list('-created_date')
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curated_collections').select('*').order('created_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const { data: creators, isLoading: creatorsLoading } = useQuery({
     queryKey: ['creatorProfiles'],
-    queryFn: () => base44.entities.CreatorProfile.filter({ status: 'approved' })
+    queryFn: async () => {
+      const { data, error } = await supabase.from('creator_profiles').select('*').eq('status', 'approved');
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const { data: jewelryItems } = useQuery({
     queryKey: ['jewelryItems'],
-    queryFn: () => base44.entities.JewelryItem.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*');
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const { data: clothingItems } = useQuery({
     queryKey: ['clothingItems'],
-    queryFn: () => base44.entities.ClothingItem.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clothing_items').select('*');
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   // Get featured brands

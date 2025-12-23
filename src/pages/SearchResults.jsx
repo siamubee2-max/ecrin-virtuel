@@ -1,31 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function SearchResults() {
   const urlParams = new URLSearchParams(window.location.search);
   const query = urlParams.get('q') || "";
-  const [activeTab, setActiveTab] = useState("all");
+  const [_activeTab, setActiveTab] = useState("all");
 
-  const { data: jewelry, isLoading: jLoading } = useQuery({
-    queryKey: ['searchJewelry'],
-    queryFn: () => base44.entities.JewelryItem.list(),
-  });
+   const { data: jewelry, isLoading: jLoading } = useQuery({
+      queryKey: ['searchJewelry'],
+      queryFn: async () => {
+         const { data, error } = await supabase.from('jewelry_items').select('*');
+         if (error) throw error;
+         return data || [];
+      },
+   });
 
-  const { data: clothes, isLoading: cLoading } = useQuery({
-    queryKey: ['searchClothes'],
-    queryFn: () => base44.entities.ClothingItem.list(),
-  });
+   const { data: clothes, isLoading: cLoading } = useQuery({
+      queryKey: ['searchClothes'],
+      queryFn: async () => {
+         const { data, error } = await supabase.from('clothing_items').select('*');
+         if (error) throw error;
+         return data || [];
+      },
+   });
 
-  const { data: stylists, isLoading: sLoading } = useQuery({
-    queryKey: ['searchStylists'],
-    queryFn: () => base44.entities.Stylist.list(),
-  });
+   const { data: stylists, isLoading: sLoading } = useQuery({
+      queryKey: ['searchStylists'],
+      queryFn: async () => {
+         const { data, error } = await supabase.from('stylists').select('*');
+         if (error) throw error;
+         return data || [];
+      },
+   });
 
   const filteredJewelry = jewelry?.filter(item => 
     item.name.toLowerCase().includes(query.toLowerCase()) || 

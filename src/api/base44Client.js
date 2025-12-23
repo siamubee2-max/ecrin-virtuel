@@ -4,7 +4,6 @@ import { supabase } from './supabaseClient'
 export const base44 = {
   auth: {
     async me() {
-      // Return null since we don't have auth yet
       return null;
     },
     async login() {
@@ -32,6 +31,8 @@ export const base44 = {
     Notification: createEntity('notifications'),
     BrandPartnership: createEntity('brand_partnerships'),
     Creator: createEntity('creators'),
+    BodyPart: createEntity('body_parts'),
+    Creation: createEntity('creations'),
   }
 }
 

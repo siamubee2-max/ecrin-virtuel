@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,11 +28,11 @@ export default function ProductDetail() {
     queryKey: ['product', productId, productType],
     queryFn: async () => {
       if (productType === 'clothing') {
-        const items = await base44.entities.ClothingItem.filter({ id: productId });
-        return items[0];
+        const { data } = await supabase.from('clothing_items').select('*').eq('id', productId)
+        return data?.[0]
       } else {
-        const items = await base44.entities.JewelryItem.filter({ id: productId });
-        return items[0];
+        const { data } = await supabase.from('jewelry_items').select('*').eq('id', productId)
+        return data?.[0]
       }
     },
     enabled: !!productId
@@ -41,14 +41,22 @@ export default function ProductDetail() {
   // Fetch reviews
   const { data: reviews } = useQuery({
     queryKey: ['reviews', productId],
-    queryFn: () => base44.entities.Review.filter({ jewelry_item_id: productId }),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('product_reviews').select('*').eq('jewelry_item_id', productId)
+      if (error) throw error
+      return data || []
+    },
     enabled: !!productId
   });
 
   // Wishlist
   const { data: wishlist } = useQuery({
     queryKey: ['myWishlist'],
-    queryFn: () => base44.entities.WishlistItem.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('wishlist_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const isWishlisted = wishlist?.some(w => w.jewelry_item_id === productId);
@@ -56,9 +64,11 @@ export default function ProductDetail() {
   const toggleWishlist = async () => {
     const existing = wishlist?.find(w => w.jewelry_item_id === productId);
     if (existing) {
-      await base44.entities.WishlistItem.delete(existing.id);
+      const { error } = await supabase.from('wishlist_items').delete().eq('id', existing.id)
+      if (error) throw error
     } else {
-      await base44.entities.WishlistItem.create({ jewelry_item_id: productId });
+      const { error } = await supabase.from('wishlist_items').insert({ jewelry_item_id: productId })
+      if (error) throw error
     }
     queryClient.invalidateQueries({ queryKey: ['myWishlist'] });
   };

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
+import integrations from '@/api/integrations';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,7 @@ const STEPS = {
 export default function CreatorOnboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(STEPS.WELCOME);
-  const [uploading, setUploading] = useState(false);
+  const [_uploading, setUploading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -49,28 +50,39 @@ export default function CreatorOnboarding() {
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch {
+        return null
+      }
+    }
   });
 
   const { data: existingProfile } = useQuery({
     queryKey: ['myCreatorProfile'],
     queryFn: async () => {
-      const profiles = await base44.entities.CreatorProfile.filter({ user_id: user?.id });
-      return profiles[0];
+      const { data } = await supabase.from('creator_profiles').select('*').eq('user_id', user?.id)
+      return data?.[0]
     },
     enabled: !!user?.id
   });
 
   const submitApplication = useMutation({
-    mutationFn: () => base44.entities.CreatorProfile.create({
-      ...formData,
-      user_id: user?.id,
-      status: 'pending',
-      commission_rate: 10,
-      total_earnings: 0,
-      follower_count: 0,
-      verified: false
-    }),
+    mutationFn: async () => {
+      const { data, error } = await supabase.from('creator_profiles').insert({
+        ...formData,
+        user_id: user?.id,
+        status: 'pending',
+        commission_rate: 10,
+        total_earnings: 0,
+        follower_count: 0,
+        verified: false
+      }).select().single()
+      if (error) throw error
+      return data
+    },
     onSuccess: () => setStep(STEPS.SUCCESS)
   });
 
@@ -79,7 +91,7 @@ export default function CreatorOnboarding() {
     if (!file) return;
     setUploading(true);
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const result = await integrations.UploadFile({ file });
       setFormData(prev => ({ ...prev, [field]: result.file_url }));
     } catch (error) {
       console.error('Upload failed', error);

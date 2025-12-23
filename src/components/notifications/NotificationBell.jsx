@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Notification } from '@/api/entities';
+import { supabase } from '@/api/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/components/LanguageProvider';
@@ -22,15 +22,25 @@ export default function NotificationBell() {
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
-      const all = await Notification.list();
-      return all;
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+      } catch (err) {
+        console.error('Failed to fetch notifications', err);
+        return [];
+      }
     },
     refetchInterval: 30000
   });
 
   const markAsReadMutation = useMutation({
     mutationFn: async (id) => {
-      await Notification.update(id, { read: true });
+      const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });

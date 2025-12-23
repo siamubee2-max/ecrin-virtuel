@@ -1,15 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState, useRef, useEffect } from 'react';
+import { supabase } from '@/api/supabaseClient';
+import integrations from '@/api/integrations';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Shirt, MessageCircle, Loader2, Send, WashingMachine, CheckCircle2, AlertTriangle, Info, Wand2, Gem, User, Bot, Lightbulb, X, ChevronDown, ShoppingBag, ExternalLink, Heart } from "lucide-react";
+import { Sparkles, Shirt, MessageCircle, Loader2, Send, WashingMachine, CheckCircle2, AlertTriangle, Info, Wand2, Gem, User, Bot, Lightbulb, X, ShoppingBag, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from '@/components/LanguageProvider';
 import { Link } from 'react-router-dom';
@@ -17,7 +17,7 @@ import { createPageUrl } from '@/utils';
 import { useCart } from '@/components/cart/CartProvider';
 
 export default function WardrobeAIAssistant({ clothingItems = [], jewelryItems = [] }) {
-  const { t } = useLanguage();
+  const { t: _t } = useLanguage();
   const { addToCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("outfits");
@@ -26,18 +26,31 @@ export default function WardrobeAIAssistant({ clothingItems = [], jewelryItems =
   // Fetch user preferences for context
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me().catch(() => null),
+    queryFn: async () => {
+      try {
+        const res = await supabase.auth.getUser();
+        return res?.data?.user || null;
+      } catch { return null }
+    }
   });
   
   // Fetch all available products for recommendations
   const { data: allJewelry } = useQuery({
     queryKey: ['allJewelryForReco'],
-    queryFn: () => base44.entities.JewelryItem.list('-created_date'),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*').order('created_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
   });
   
   const { data: allClothing } = useQuery({
     queryKey: ['allClothingForReco'],
-    queryFn: () => base44.entities.ClothingItem.list('-created_date'),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clothing_items').select('*').order('created_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
   });
   
   // Outfit suggestions state
@@ -143,7 +156,7 @@ Provide styling advice in JSON format. For recommended_products, ONLY use actual
   "do_not": "one thing to avoid with this combination"
 }`;
 
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await integrations.InvokeLLM({
         prompt,
         response_json_schema: {
           type: "object",
@@ -219,7 +232,7 @@ Provide styling advice in JSON format. For recommended_products, ONLY use actual
         "warnings": ["things to avoid"]
       }`;
 
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await integrations.InvokeLLM({
         prompt,
         response_json_schema: {
           type: "object",
@@ -336,7 +349,7 @@ INSTRUCTIONS:
 9. When suggesting items to purchase, mention them by name with the format "Check out [Product Name]" so we can link them
 10. If the question relates to completing an outfit, recommend specific purchasable items that would complement their wardrobe`;
 
-      const response = await base44.integrations.Core.InvokeLLM({
+      const response = await integrations.InvokeLLM({
         prompt
       });
       

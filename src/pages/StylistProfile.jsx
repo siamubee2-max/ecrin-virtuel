@@ -1,56 +1,69 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Star, Clock, Calendar as CalendarIcon, CheckCircle2, Lock, ShoppingBag } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, Star, Clock, Lock, ShoppingBag, ArrowRight } from "lucide-react";
 import { toast } from 'sonner';
 
 export default function StylistProfile() {
   const urlParams = new URLSearchParams(window.location.search);
   const stylistId = urlParams.get('id');
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const _navigate = useNavigate();
+  const _queryClient = useQueryClient();
   const [selectedService, setSelectedService] = useState(null);
   const [bookingDate, setBookingDate] = useState(undefined);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
 
   const { data: currentUser } = useQuery({
     queryKey: ['me'],
-    queryFn: () => base44.auth.me().catch(() => null),
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch { return null }
+    }
   });
 
   const { data: stylist, isLoading } = useQuery({
     queryKey: ['stylist', stylistId],
     queryFn: async () => {
-      const res = await base44.entities.Stylist.list();
-      return res.find(s => s.id === stylistId);
+      const { data } = await supabase.from('stylists').select('*').eq('id', stylistId)
+      return data?.[0]
     },
     enabled: !!stylistId,
   });
 
   const { data: services } = useQuery({
     queryKey: ['stylistServices', stylistId],
-    queryFn: () => base44.entities.StylistService.filter({ stylist_id: stylistId }),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('stylist_services').select('*').eq('stylist_id', stylistId)
+      if (error) throw error
+      return data || []
+    },
     enabled: !!stylistId,
   });
 
   const { data: lookbooks } = useQuery({
     queryKey: ['stylistLookbooks', stylistId],
-    queryFn: () => base44.entities.Lookbook.filter({ stylist_id: stylistId }),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('lookbook_entries').select('*').eq('stylist_id', stylistId)
+      if (error) throw error
+      return data || []
+    },
     enabled: !!stylistId,
   });
 
   const bookingMutation = useMutation({
-    mutationFn: (data) => base44.entities.StylistBooking.create(data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from('stylist_bookings').insert(data)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => {
       toast.success("Booking request sent successfully!");
       setIsBookingOpen(false);

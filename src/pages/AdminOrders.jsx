@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Search, Filter, Truck, Package, Save, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Search, Filter, Package, Save, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,36 +21,49 @@ export default function AdminOrders() {
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
+    queryFn: async () => {
+      try {
+        const { data } = await supabase.auth.getUser()
+        return data?.user || null
+      } catch { return null }
+    }
   });
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['adminOrders'],
-    queryFn: () => base44.entities.Order.list('-created_date'),
-    enabled: !!user // Only fetch if user is loaded
+    queryFn: async () => {
+      const { data, error } = await supabase.from('orders').select('*').order('created_date', { ascending: false })
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user
   });
 
   // Fetch details for the selected order
   const { data: orderItem } = useQuery({
     queryKey: ['orderItem', selectedOrder?.item_id],
     queryFn: async () => {
-      const items = await base44.entities.JewelryItem.filter({ id: selectedOrder.item_id });
-      return items[0];
+      const { data } = await supabase.from('jewelry_items').select('*').eq('id', selectedOrder.item_id)
+      return data?.[0]
     },
     enabled: !!selectedOrder?.item_id
   });
 
   const { data: orderCustomer } = useQuery({
     queryKey: ['orderCustomer', selectedOrder?.customer_email],
-    queryFn: async () => {
-       const users = await base44.entities.User.list(); 
-       return users.find(u => u.email === selectedOrder.customer_email);
-    },
+     queryFn: async () => {
+       const { data } = await supabase.from('users').select('*').eq('email', selectedOrder.customer_email)
+       return data?.[0]
+     },
     enabled: !!selectedOrder?.customer_email
   });
 
   const updateOrderMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Order.update(id, data),
+    mutationFn: async ({ id, data }) => {
+      const { error } = await supabase.from('orders').update(data).eq('id', id)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminOrders'] });
       setSelectedOrder(null);
@@ -184,7 +197,7 @@ export default function AdminOrders() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders?.map((order, idx) => (
+                filteredOrders?.map((order, _idx) => (
                   <TableRow 
                     key={order.id} 
                     className="border-b border-neutral-800/50 hover:bg-neutral-800/30 transition-colors"

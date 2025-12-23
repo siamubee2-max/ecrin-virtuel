@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState } from 'react';
+import { supabase } from '@/api/supabaseClient';
+import integrations from '@/api/integrations';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,23 +42,39 @@ export default function Wardrobe() {
 
   const { data: bodyParts, isLoading } = useQuery({
     queryKey: ['bodyParts'],
-    queryFn: () => base44.entities.BodyPart.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('body_parts').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   // Fetch clothing items for AI assistant
   const { data: clothingItems } = useQuery({
     queryKey: ['clothingItems'],
-    queryFn: () => base44.entities.ClothingItem.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clothing_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   // Fetch jewelry items for AI assistant
   const { data: jewelryItems } = useQuery({
     queryKey: ['jewelryItems'],
-    queryFn: () => base44.entities.JewelryItem.list(),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.BodyPart.create(data),
+    mutationFn: async (data) => {
+      const { data: created, error } = await supabase.from('body_parts').insert(data).select().single()
+      if (error) throw error
+      return created
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bodyParts'] });
       setIsDialogOpen(false);
@@ -66,7 +83,11 @@ export default function Wardrobe() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.BodyPart.delete(id),
+    mutationFn: async (id) => {
+      const { error } = await supabase.from('body_parts').delete().eq('id', id)
+      if (error) throw error
+      return true
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bodyParts'] });
     }
@@ -78,7 +99,7 @@ export default function Wardrobe() {
 
     setUploading(true);
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const result = await integrations.UploadFile({ file });
       setNewPart(prev => ({ ...prev, image_url: result.file_url }));
     } catch (error) {
       console.error("Upload failed", error);

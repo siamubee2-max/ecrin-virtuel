@@ -1,10 +1,9 @@
-import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, Package, Truck, CheckCircle, XCircle, Clock, ShoppingBag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -13,18 +12,22 @@ export default function Orders() {
   const { data: orders, isLoading: ordersLoading } = useQuery({
     queryKey: ['myOrders'],
     queryFn: async () => {
-      // Assuming RLS handles filtering for "my" orders, or we filter client side if needed
-      // standard list() should return user's orders if configured correctly, but here we might get all if RLS isn't strict yet
-      // We'll filter by created_by just in case on the client side if the API returns all
-      const user = await base44.auth.me();
-      const allOrders = await base44.entities.Order.list('-created_date');
-      return allOrders.filter(o => o.created_by === user.email);
+      const userRes = await supabase.auth.getUser();
+      const user = userRes?.data?.user;
+      if (!user) return [];
+      const { data, error } = await supabase.from('orders').select('*').order('created_date', { ascending: false }).eq('customer_email', user.email)
+      if (error) throw error
+      return data || []
     }
   });
 
   const { data: items } = useQuery({
     queryKey: ['jewelryItems'],
-    queryFn: () => base44.entities.JewelryItem.list()
+    queryFn: async () => {
+      const { data, error } = await supabase.from('jewelry_items').select('*')
+      if (error) throw error
+      return data || []
+    }
   });
 
   const getStatusColor = (status) => {
