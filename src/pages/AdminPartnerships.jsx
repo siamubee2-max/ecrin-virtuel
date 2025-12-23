@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Plus, Crown, Users, Package, TrendingUp, DollarSign, Edit, Trash2, CheckCircle2, XCircle, Eye } from "lucide-react";
+import { Loader2, Plus, Crown, Users, TrendingUp, DollarSign, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
 
 export default function AdminPartnerships() {
   const queryClient = useQueryClient();
@@ -28,12 +28,12 @@ export default function AdminPartnerships() {
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      try { const { data } = await supabase.auth.getUser(); return data?.user || null } catch(e){return null}
+      try { const { data } = await supabase.auth.getUser(); return data?.user || null } catch{return null}
     }
   });
 
   // Fetch data
-  const { data: brands, isLoading: brandsLoading } = useQuery({
+  const { data: brands, isLoading: _brandsLoading } = useQuery({
     queryKey: ['allBrands'],
     queryFn: async () => {
       const { data, error } = await supabase.from('brand_partnerships').select('*')
@@ -42,7 +42,7 @@ export default function AdminPartnerships() {
     }
   });
 
-  const { data: creators, isLoading: creatorsLoading } = useQuery({
+  const { data: creators, isLoading: _creatorsLoading } = useQuery({
     queryKey: ['allCreators'],
     queryFn: async () => {
       const { data, error } = await supabase.from('creator_profiles').select('*')
@@ -116,7 +116,7 @@ export default function AdminPartnerships() {
 
   // Stats
   const totalClicks = clicks?.length || 0;
-  const conversions = clicks?.filter(c => c.converted).length || 0;
+  const _conversions = clicks?.filter(c => c.converted).length || 0;
   const totalCommissions = clicks?.reduce((sum, c) => sum + (c.commission_amount || 0), 0) || 0;
 
   if (user?.role !== 'admin') {
@@ -495,7 +495,15 @@ export default function AdminPartnerships() {
                       <TableCell>
                         <Switch 
                           checked={col.featured} 
-                          onCheckedChange={(v) => base44.entities.CuratedCollection.update(col.id, { featured: v }).then(() => queryClient.invalidateQueries({ queryKey: ['allCollections'] }))}
+                          onCheckedChange={async (v) => {
+                            try {
+                              const { error } = await supabase.from('curated_collections').update({ featured: v }).eq('id', col.id);
+                              if (error) throw error;
+                              queryClient.invalidateQueries({ queryKey: ['allCollections'] });
+                            } catch (err) {
+                              console.error('Failed to update collection featured flag', err);
+                            }
+                          }}
                         />
                       </TableCell>
                     </TableRow>

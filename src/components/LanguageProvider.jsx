@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import { createContext, useState, useContext } from 'react';
 
 const translations = {
   fr: {
@@ -1062,7 +1062,7 @@ export const LanguageProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem('app_language');
       return saved || 'fr';
-    } catch (e) {
+    } catch {
       return 'fr';
     }
   });
@@ -1071,7 +1071,7 @@ export const LanguageProvider = ({ children }) => {
     setLanguageState(lang);
     try {
       localStorage.setItem('app_language', lang);
-    } catch (e) {
+    } catch {
       // Ignore storage errors
     }
   };
@@ -1081,7 +1081,7 @@ export const LanguageProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem('user_preferences');
       return saved ? JSON.parse(saved) : {};
-    } catch (e) {
+    } catch {
       return {};
     }
   });
@@ -1091,7 +1091,7 @@ export const LanguageProvider = ({ children }) => {
       const newPrefs = { ...prev, [key]: value };
       try {
         localStorage.setItem('user_preferences', JSON.stringify(newPrefs));
-      } catch (e) {}
+      } catch {}
       return newPrefs;
     });
   };

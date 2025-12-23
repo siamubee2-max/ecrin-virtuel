@@ -1,5 +1,4 @@
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Gem, User, Sparkles, Menu, X, Globe, Box, Shirt, UserCircle, Compass, Package, ShieldCheck, ShoppingBag, Search, Star } from 'lucide-react';
@@ -26,7 +25,7 @@ function CartButton() {
   );
 }
 
-function LayoutContent({ children }) {
+function LayoutContent({ children: _children }) {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { t, language, setLanguage } = useLanguage();

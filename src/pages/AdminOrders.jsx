@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Search, Filter, Truck, Package, Save, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Search, Filter, Package, Save, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ export default function AdminOrders() {
       try {
         const { data } = await supabase.auth.getUser()
         return data?.user || null
-      } catch (e) { return null }
+      } catch { return null }
     }
   });
 
@@ -197,7 +197,7 @@ export default function AdminOrders() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders?.map((order, idx) => (
+                filteredOrders?.map((order, _idx) => (
                   <TableRow 
                     key={order.id} 
                     className="border-b border-neutral-800/50 hover:bg-neutral-800/30 transition-colors"

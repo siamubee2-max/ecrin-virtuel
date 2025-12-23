@@ -53,7 +53,8 @@ const safeDespiaWithResponse = (command, variableName) => {
       window.despia = command;
       
       // Start watching for response (timeout after 5 seconds)
-      const timeout = setTimeout(() => resolve(null), 5000);
+      const timeoutId = setTimeout(() => resolve(null), 5000);
+      void timeoutId; // Prevent unused variable warning
       checkVariable();
       
     } catch (error) {

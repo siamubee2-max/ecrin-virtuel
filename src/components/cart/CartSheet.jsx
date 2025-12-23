@@ -1,12 +1,10 @@
-import React from 'react';
 import { useCart } from './CartProvider';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import SalesBadge from '@/components/jewelry/SalesBadge';
 
 export default function CartSheet() {
   const { items, removeFromCart, updateQuantity, cartTotal, isOpen, setIsOpen } = useCart();

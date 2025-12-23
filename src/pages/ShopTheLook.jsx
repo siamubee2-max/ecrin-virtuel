@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -99,7 +99,7 @@ export default function ShopTheLook() {
   };
 
   const items = getItems();
-  const totalValue = items.reduce((sum, item) => sum + (item.sale_price || item.price || 0), 0);
+  const _totalValue = items.reduce((sum, item) => sum + (item.sale_price || item.price || 0), 0);
   const selectedTotal = items
     .filter(item => selectedItems.includes(item.id))
     .reduce((sum, item) => sum + (item.sale_price || item.price || 0), 0);

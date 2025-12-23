@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Upload, X, Image as ImageIcon, Plus } from "lucide-react";
+import { Loader2, X, Image as ImageIcon, Plus } from "lucide-react";
 import integrations from '@/api/integrations';
 import { cn } from "@/lib/utils";
 

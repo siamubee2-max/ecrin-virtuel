@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Loader2, Camera, Shirt, Trash2, Sparkles, Link as LinkIcon, X, CheckSquare, Square, Video } from "lucide-react";
+import { Plus, Loader2, Camera, Shirt, Trash2, Sparkles, Link as LinkIcon, X, CheckSquare, Square, Video } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from '@/components/LanguageProvider';
 import ClothingFilters from '@/components/clothing/ClothingFilters';
@@ -68,7 +68,7 @@ export default function Closet() {
     },
   });
 
-  const { data: jewelry, isLoading: jewelryLoading } = useQuery({
+  const { data: jewelry, isLoading: _jewelryLoading } = useQuery({
     queryKey: ['jewelryItems'],
     queryFn: async () => {
       const { data, error } = await supabase.from('jewelry_items').select('*')
@@ -139,7 +139,7 @@ export default function Closet() {
     try {
       let prompt = "";
       let file_urls = [];
-      let jsonSchema = {};
+      let _jsonSchema = {};
 
       if (stylistMode === 'outfit') {
         // Mode: Clothes -> Jewelry

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import integrations from '@/api/integrations';
 import { useQuery } from '@tanstack/react-query';
@@ -34,7 +34,7 @@ export default function Studio() {
       try {
         const { data } = await supabase.auth.getUser()
         return data?.user || null
-      } catch (e) {
+      } catch {
         return null
       }
     }
@@ -42,7 +42,7 @@ export default function Studio() {
 
   const [step, setStep] = useState(STEPS.UPLOAD);
   const [uploading, setUploading] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [_generating, setGenerating] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
   
   // Creation State

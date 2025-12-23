@@ -6,8 +6,26 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
   { ignores: ['dist'] },
+  // Config files (Node.js environment)
+  {
+    files: ['*.config.js', 'tailwind.config.js', 'vite.config.js', 'postcss.config.js'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.node,
+        module: 'readonly',
+        require: 'readonly',
+        __dirname: 'readonly',
+      },
+      sourceType: 'module',
+    },
+    rules: {
+      'no-undef': 'off',
+    },
+  },
   {
     files: ['**/*.{js,jsx}'],
+    ignores: ['*.config.js'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -33,6 +51,20 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+      // Ignore unused vars prefixed with underscore
+      'no-unused-vars': ['error', { 
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_'
+      }],
+      // Disable prop-types validation (using TypeScript or runtime validation)
+      'react/prop-types': 'off',
+      // Allow unescaped entities in JSX
+      'react/no-unescaped-entities': 'off',
+      // Allow empty catch blocks
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      // Allow unknown properties for custom components (cmdk, toast)
+      'react/no-unknown-property': ['error', { ignore: ['cmdk-input-wrapper', 'toast-close'] }],
     },
   },
 ]

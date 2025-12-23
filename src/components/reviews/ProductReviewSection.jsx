@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ export default function ProductReviewSection({ itemId, reviews = [] }) {
       try {
         const { data } = await supabase.auth.getUser()
         return data?.user || null
-      } catch (e) {
+      } catch {
         return null
       }
     }

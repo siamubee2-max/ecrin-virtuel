@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,7 +12,7 @@ export default function ClothingFilters({
   setFilters,
   uniqueBrands = [],
   uniqueColors = [],
-  uniqueMaterials = []
+  _uniqueMaterials = []
 }) {
   const { t } = useLanguage();
 

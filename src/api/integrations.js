@@ -10,7 +10,7 @@ export const UploadFile = async ({ file }) => {
   const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
   const filePath = `uploads/${fileName}`;
 
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('images')
     .upload(filePath, file);
 
@@ -28,7 +28,7 @@ export const UploadFile = async ({ file }) => {
 };
 
 // Placeholder pour InvokeLLM - à connecter à OpenAI plus tard
-export const InvokeLLM = async ({ prompt, file_urls, response_json_schema }) => {
+export const InvokeLLM = async ({ prompt, file_urls }) => {
   console.log('InvokeLLM called with:', { prompt, file_urls });
   // Pour l'instant, retourne des suggestions génériques
   return {
@@ -50,7 +50,7 @@ export const GenerateImage = async ({ prompt, existing_image_urls }) => {
 
 // Placeholder pour extraction de données
 export const ExtractDataFromUploadedFile = async ({ file_url }) => {
-  console.log('ExtractDataFromUploadedFile called');
+  console.log('ExtractDataFromUploadedFile called for:', file_url);
   return {};
 };
 
@@ -62,13 +62,13 @@ export const FetchWebsite = async ({ url }) => {
 
 // Placeholder pour email
 export const SendEmail = async ({ to, subject, body }) => {
-  console.log('SendEmail called:', { to, subject });
+  console.log('SendEmail called:', { to, subject, body });
   return { success: true };
 };
 
 // Placeholder pour SMS
 export const SendSMS = async ({ to, message }) => {
-  console.log('SendSMS called:', { to });
+  console.log('SendSMS called:', { to, message });
   return { success: true };
 };
 

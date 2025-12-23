@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import integrations from '@/api/integrations';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,7 +24,7 @@ export default function StyleFeed() {
       try {
         const { data } = await supabase.auth.getUser()
         return data?.user || null
-      } catch (e) { return null }
+      } catch { return null }
     }
   });
 

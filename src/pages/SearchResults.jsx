@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function SearchResults() {
   const urlParams = new URLSearchParams(window.location.search);
   const query = urlParams.get('q') || "";
-  const [activeTab, setActiveTab] = useState("all");
+  const [_activeTab, setActiveTab] = useState("all");
 
    const { data: jewelry, isLoading: jLoading } = useQuery({
       queryKey: ['searchJewelry'],

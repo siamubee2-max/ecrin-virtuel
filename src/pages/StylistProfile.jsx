@@ -1,24 +1,20 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Star, Clock, Calendar as CalendarIcon, CheckCircle2, Lock, ShoppingBag } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, Star, Clock, Lock, ShoppingBag, ArrowRight } from "lucide-react";
 import { toast } from 'sonner';
 
 export default function StylistProfile() {
   const urlParams = new URLSearchParams(window.location.search);
   const stylistId = urlParams.get('id');
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const _navigate = useNavigate();
+  const _queryClient = useQueryClient();
   const [selectedService, setSelectedService] = useState(null);
   const [bookingDate, setBookingDate] = useState(undefined);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -29,7 +25,7 @@ export default function StylistProfile() {
       try {
         const { data } = await supabase.auth.getUser()
         return data?.user || null
-      } catch (e) { return null }
+      } catch { return null }
     }
   });
 

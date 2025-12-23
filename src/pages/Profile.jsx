@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, User, Heart, Clock, Save, Gem, Bookmark } from "lucide-react";
 import { motion } from "framer-motion";
@@ -32,9 +31,9 @@ export default function Profile() {
   });
 
   // Constants for preferences
-  const COLORS = ["Or / Gold", "Argent / Silver", "Or Rose / Rose Gold", "Noir / Black", "Coloré / Colorful"];
-  const TYPES = ["Colliers", "Boucles d'oreilles", "Bagues", "Bracelets", "Parures"];
-  const OCCASIONS = ["Quotidien", "Travail", "Soirée", "Mariage", "Vacances"];
+  const _COLORS = ["Or / Gold", "Argent / Silver", "Or Rose / Rose Gold", "Noir / Black", "Coloré / Colorful"];
+  const _TYPES = ["Colliers", "Boucles d'oreilles", "Bagues", "Bracelets", "Parures"];
+  const _OCCASIONS = ["Quotidien", "Travail", "Soirée", "Mariage", "Vacances"];
 
   // Fetch Current User
   const { data: user, isLoading: userLoading } = useQuery({
@@ -172,7 +171,7 @@ export default function Profile() {
     });
   };
 
-  const togglePreference = (category, value) => {
+  const _togglePreference = (category, value) => {
     setFormData(prev => {
       const currentList = prev.style_preferences[category] || [];
       const newList = currentList.includes(value)

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import integrations from '@/api/integrations';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -31,7 +31,7 @@ const STEPS = {
 export default function CreatorOnboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(STEPS.WELCOME);
-  const [uploading, setUploading] = useState(false);
+  const [_uploading, setUploading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -54,7 +54,7 @@ export default function CreatorOnboarding() {
       try {
         const { data } = await supabase.auth.getUser()
         return data?.user || null
-      } catch (e) {
+      } catch {
         return null
       }
     }

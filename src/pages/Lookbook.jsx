@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
 import { supabase } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Loader2, Lock, ShoppingBag, ExternalLink, ArrowLeft } from "lucide-react";
 import { toast } from 'sonner';
@@ -20,7 +18,7 @@ export default function Lookbook() {
       try {
         const { data } = await supabase.auth.getUser()
         return data?.user || null
-      } catch (e) { return null }
+      } catch { return null }
     },
   });
 
@@ -60,7 +58,10 @@ export default function Lookbook() {
   });
 
   const purchaseMutation = useMutation({
-    mutationFn: (data) => base44.entities.LookbookAccess.create(data),
+    mutationFn: async (data) => {
+      const { error } = await supabase.from('lookbook_access').insert(data);
+      if (error) throw error;
+    },
     onSuccess: () => {
       toast.success("Purchase successful! Content unlocked.");
       queryClient.invalidateQueries({ queryKey: ['lookbookAccess'] });

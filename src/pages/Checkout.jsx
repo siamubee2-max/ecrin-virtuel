@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useCart } from '@/components/cart/CartProvider';
 import { supabase } from '@/api/supabaseClient';
 import { useMutation } from '@tanstack/react-query';
@@ -24,7 +24,7 @@ const STEPS = {
 export default function Checkout() {
   const { items, cartTotal, clearCart } = useCart();
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t: _t } = useLanguage();
   const [step, setStep] = useState(STEPS.SHIPPING);
   
   const [formData, setFormData] = useState({
