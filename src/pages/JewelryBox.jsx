@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Loader2, Camera, Tag, Trash2, Filter, Star, Eye, Heart, DollarSign, Calendar as CalendarIcon, Edit2, Percent, ShoppingBag } from "lucide-react";
+import { Plus, Search, Loader2, Camera, Tag, Trash2, Filter, Star, Eye, Heart, DollarSign, Calendar as CalendarIcon, Edit2, Percent, ShoppingBag, Sparkles, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLanguage } from '@/components/LanguageProvider';
 import StarRating from '@/components/reviews/StarRating';
